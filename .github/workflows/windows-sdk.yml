@@ -18,27 +18,27 @@ jobs:
         name: Cache toolchain binaries
         with:
           path: toolchain-bin
-          key: toolchain-win-gcc10.1.0_binutils2.34
+          key: toolchain-win-gcc13.2.0_binutils2.41
       - uses: actions/cache@v4
         id: cache-sources
         if: steps.cache-binaries.outputs.cache-hit != 'true'
         name: Cache toolchain sources
         with:
           path: toolchain-src
-          key: toolchain-src-gcc10.1.0
+          key: toolchain-src-gcc13.2.0
 
       - name: Download toolchain sources
         if: steps.cache-binaries.outputs.cache-hit != 'true' && steps.cache-sources.outputs.cache-hit != 'true'
         run: |
           mkdir toolchain-src && cd toolchain-src
-          curl -L http://ftpmirror.gnu.org/binutils/binutils-2.34.tar.bz2 | tar xj
-          curl -L http://ftpmirror.gnu.org/gcc/gcc-10.1.0/gcc-10.1.0.tar.xz | tar xJ
-          curl -L http://ftpmirror.gnu.org/mpfr/mpfr-4.0.2.tar.xz | tar xJ
-          ln -sr mpfr-4.0.2 ./gcc-10.1.0/mpfr
-          curl -L http://ftpmirror.gnu.org/gmp/gmp-6.2.0.tar.xz | tar xJ
-          ln -sr gmp-6.2.0 ./gcc-10.1.0/gmp
-          curl -L http://ftpmirror.gnu.org/mpc/mpc-1.1.0.tar.gz | tar xz
-          ln -sr mpc-1.1.0 ./gcc-10.1.0/mpc
+          curl -L http://ftpmirror.gnu.org/binutils/binutils-2.41.tar.bz2 | tar xj
+          curl -L http://ftpmirror.gnu.org/gcc/gcc-13.2.0/gcc-13.2.0.tar.xz | tar xJ
+          curl -L http://ftpmirror.gnu.org/mpfr/mpfr-4.2.0.tar.xz | tar xJ
+          ln -sr mpfr-4.2.0 ./gcc-13.2.0/mpfr
+          curl -L http://ftpmirror.gnu.org/gmp/gmp-6.3.0.tar.xz | tar xJ
+          ln -sr gmp-6.3.0 ./gcc-13.2.0/gmp
+          curl -L http://ftpmirror.gnu.org/mpc/mpc-1.3.1.tar.gz | tar xz
+          ln -sr mpc-1.3.1 ./gcc-13.2.0/mpc
 
       - name: Build toolchain
         if: steps.cache-binaries.outputs.cache-hit != 'true'
@@ -46,14 +46,14 @@ jobs:
           mkdir -p toolchain-build/binutils toolchain-build/gcc toolchain-bin
 
           cd toolchain-build/binutils
-          ../../toolchain-src/binutils-2.34/configure \
+          ../../toolchain-src/binutils-2.41/configure \
               --target=sh3eb-elf --host=i686-w64-mingw32 \
               --disable-nls --prefix=
           make -j$(nproc)
           make DESTDIR=${GITHUB_WORKSPACE}/toolchain-bin install
 
           cd ../gcc
-          ../../toolchain-src/gcc-10.1.0/configure \
+          ../../toolchain-src/gcc-13.2.0/configure \
               --target=sh3eb-elf --with-endian=big \
               --with-pkgversion=PrizmSDK \
               --host=i686-w64-mingw32 \
@@ -74,7 +74,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: toolchain-bin-gcc10.1.0
+          name: toolchain-bin-gcc13.2.0
           path: toolchain-bin
 
   build_libfxcg:
@@ -104,14 +104,14 @@ jobs:
           sudo apt-get -qqy install cmake curl mingw-w64 xz-utils git
       - name: Download sources
         run: |
-          curl -L https://downloads.sourceforge.net/project/libpng/zlib/1.2.11/zlib-1.2.11.tar.xz | tar xJ
-          curl -L https://downloads.sourceforge.net/project/libpng/libpng16/1.6.37/libpng-1.6.37.tar.xz | tar xJ
+          curl -L https://downloads.sourceforge.net/project/libpng/zlib/1.2.13/zlib-1.2.13.tar.xz | tar xJ
+          curl -L https://downloads.sourceforge.net/project/libpng/libpng16/1.6.40/libpng-1.6.40.tar.xz | tar xJ
           git clone https://gitlab.com/taricorp/mkg3a.git mkg3a-master
       - name: Compile
         env:
           INSTALL_DIR: ${{ github.workspace }}/libs-bin
         run: |
-          cd zlib-1.2.11
+          cd zlib-1.2.13
           make -f win32/Makefile.gcc \
                BINARY_PATH=${INSTALL_DIR}/bin \
                INCLUDE_PATH=${INSTALL_DIR}/include \
@@ -120,7 +120,7 @@ jobs:
                PREFIX=i686-w64-mingw32- \
                install -j$(nproc)
 
-          cd ../libpng-1.6.37
+          cd ../libpng-1.6.40
           cmake -DCMAKE_SYSTEM_NAME=Windows \
                 -DCMAKE_C_COMPILER=i686-w64-mingw32-gcc \
                 -DCMAKE_CXX_COMPILER=i686-w64-mingw32-g++ \
@@ -159,17 +159,14 @@ jobs:
           path: pkg
       - uses: actions/download-artifact@v4
         with:
-          name: toolchain-bin-gcc10.1.0
+          name: toolchain-bin-gcc13.2.0
           path: pkg
       - name: Download make
-        # Slightly weird to manually download the chocolatey package, but
-        # the packager doesn't seem to have said how they build this so
-        # we're stuck with their binaries. This is just very convenient.
         run: |
-          mkdir make-4.3
-          cd make-4.3
-          curl -L https://chocolatey.org/api/v2/package/make/4.3 -o make.4.3.nupkg
-          unzip make.4.3.nupkg
+          mkdir make-4.4
+          cd make-4.4
+          curl -L https://chocolatey.org/api/v2/package/make/4.4 -o make.4.4.nupkg
+          unzip make.4.4.nupkg
           mkdir -p ../pkg/bin
           cp tools/install/bin/make.exe ../pkg/bin/
       - name: Copy project files
